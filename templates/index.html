@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detector de Emociones</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background-color: #f8f9fa; }
+        video, canvas {
+            border: 8px solid #ccc;
+            border-radius: 10px;
+            transition: border-color 0.4s ease;
+        }
+        #emotion {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h2>Detector de Emociones</h2>
+    <video id="video" width="640" height="480" autoplay></video><br>
+    <p id="emotion">Emoción: ---</p>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const emotionText = document.getElementById('emotion');
+
+        const emotionColors = {
+            happy: "#4CAF50",
+            sad: "#2196F3",
+            angry: "#F44336",
+            surprise: "#FFEB3B",
+            fear: "#9C27B0",
+            neutral: "#9E9E9E",
+            disgust: "#795548"
+        };
+
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            video.srcObject = stream;
+        }).catch(error => {
+            emotionText.innerText = "⚠️ No se pudo acceder a la cámara.";
+        });
+
+        setInterval(() => {
+            ctx.save();
+            ctx.scale(-1, 1); // Efecto espejo
+            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            const image = canvas.toDataURL('image/jpeg');
+
+            fetch('/detect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("Emoción detectada:", data);
+                if (data.emotion) {
+                    const e = data.emotion;
+                    emotionText.innerText = `Emoción: ${e}`;
+                    video.style.borderColor = emotionColors[e] || "#ccc";
+                }
+            });
+        }, 2000);
+    </script>
+</body>
+</html>
